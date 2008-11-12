@@ -13,6 +13,10 @@ The notifier uses the Horde_Yaml class. You can install this class using the com
     pear channel-discover pear.horde.org
     pear install horde/yaml
 
+It also uses Pear's HTTP_Request:
+
+    pear install HTTP_Request
+    
 # License
 
 Copyright (c) 2008, Rich Cavanaugh
