@@ -1,26 +1,30 @@
 <?php
 class Hoptoad
 {
-  public static function errorHandler($code, $message)
+  public static function errorHandler($code, $message, $file, $line)
   {
     if ($code == E_STRICT) return;
     
-    Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $message, null, 2);
+	$trace = Hoptoad::tracer();
+    
+    Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $message, $file, $line, $trace, null);
   }
   
   public static function exceptionHandler($exception)
   {
-    Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $exception->getMessage(), null, 2);
+  	$trace = Hoptoad::tracer($exception->getTrace());
+  	
+    Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $exception->getMessage(), $exception->getFile(), $exception->getLine(), $trace, null);
   }
   
-  public static function notifyHoptoad($api_key, $message, $error_class=null, $offset=1)
+  public static function notifyHoptoad($api_key, $message, $file, $line, $trace, $error_class=null)
   {
-    $lines = array_slice(Hoptoad::tracer(), $offset);
-
-    $req =& new HTTP_Request("http://hoptoadapp.com/notices/", array("method" => "POST", "timeout" => 1));
+    $req =& new HTTP_Request("http://hoptoadapp.com/notices/", array("method" => "POST", "timeout" => 2));
     $req->addHeader('Accept', 'text/xml, application/xml');
     $req->addHeader('Content-type', 'application/x-yaml');
 
+    array_unshift($trace, "$file:$line");
+    
     if (isset($_SESSION)) {
       $session = array('key' => session_id(), 'data' => $_SESSION);
     } else {
@@ -31,34 +35,41 @@ class Hoptoad
       'api_key'         => $api_key,
       'error_class'     => $error_class,
       'error_message'   => $message,
-      'backtrace'       => $lines,
+      'backtrace'       => $trace,
       'request'         => array("params" => $_REQUEST, "url" => "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}"),
       'session'         => $session,
       'environment'     => $_SERVER
     );
-
+    
     $req->setBody(Horde_Yaml::dump(array("notice" => $body)));
     $req->sendRequest();
   }
   
-  public static function tracer()
+  public static function tracer($trace = NULL)
   {
     $lines = Array(); 
 
-    $trace = debug_backtrace();
+    $trace = $trace ? $trace : debug_backtrace();
     
     $indent = '';
     $func = '';
     
     foreach($trace as $val) {
-      if (!isset($val['file']) || !isset($val['line'])) continue;
+      if (isset($val['class']) && $val['class'] == 'Hoptoad') continue;
       
-      $line = $val['file'] . ' on line ' . $val['line'];
-    
+      $file = isset($val['file']) ? $val['file'] : 'Unknown file';
+      $line_number = isset($val['line']) ? $val['line'] : '';
+      $func = isset($val['function']) ? $val['function'] : '';
+      $class = isset($val['class']) ? $val['class'] : '';
+      
+      $line = $file;
+      if ($line_number) $line .= ':' . $line_number;
       if ($func) $line .= ' in function ' . $func;
-      $func = $val['function'];
+      if ($class) $line .= ' in class ' . $class;
+      
       $lines[] = $line;
     }
+    
     return $lines;
   }  
 }
