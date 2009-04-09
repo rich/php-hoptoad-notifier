@@ -1,10 +1,12 @@
 # Introduction
 
-This is a very rough first stab at a PHP [Hoptoad](http://hoptoadapp.com) notifier. I'm using it in production right now with success but that's no guarantee it won't take down your site, destroy your business and ransom your family.
+This is a simple [Hoptoad](http://hoptoadapp.com) notifier for PHP. It's been used in a few production sites now with success. It's not quite as fully featured as the official Ruby notifier but it works well. 
 
-# Known Bugs
+# Limitations
 
-The Hoptoad::tracer() method does not generate traces that are 100% correct.
+This notifier does not contain two big features from the Ruby notifier. The two are error filtering and deploy tracking. Error filtering will be coming in a future release.
+
+For deploy tracking, since I use Capistrano to deploy my PHP apps, I simply use the Ruby notifier to perform the deploy tracking. For this reason, unless someone wants to contribute patches, I don't see deploy tracking coming to the php notifier.
 
 # Requirements
 
@@ -19,7 +21,7 @@ It also uses Pear's HTTP_Request:
     
 # License
 
-Copyright (c) 2008, Rich Cavanaugh
+Copyright (c) 2009, Rich Cavanaugh
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

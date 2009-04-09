@@ -5,6 +5,12 @@ if (!class_exists('Horde_Yaml_Dumper')) require_once('Horde/Yaml/Dumper.php');
 
 class Hoptoad
 {
+  public static function installHandlers()
+  {
+    set_error_handler(array("Hoptoad", "errorHandler"));
+    set_exception_handler(array("Hoptoad", "exceptionHandler"));
+  }
+  
   public static function errorHandler($code, $message, $file, $line)
   {
     if ($code == E_STRICT) return;
