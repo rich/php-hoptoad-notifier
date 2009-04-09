@@ -11,8 +11,10 @@ class Hoptoad
    * @return void
    * @author Rich Cavanaugh
    */
-  public static function installHandlers()
+  public static function installHandlers($api_key=NULL)
   {
+    if (isset($api_key)) define('HOPTOAD_API_KEY', $api_key);
+    
     set_error_handler(array("Hoptoad", "errorHandler"));
     set_exception_handler(array("Hoptoad", "exceptionHandler"));
   }
