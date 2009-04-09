@@ -5,12 +5,28 @@ if (!class_exists('Horde_Yaml_Dumper')) require_once('Horde/Yaml/Dumper.php');
 
 class Hoptoad
 {
+  /**
+   * Install the error and exception handlers that connect to Hoptoad
+   *
+   * @return void
+   * @author Rich Cavanaugh
+   */
   public static function installHandlers()
   {
     set_error_handler(array("Hoptoad", "errorHandler"));
     set_exception_handler(array("Hoptoad", "exceptionHandler"));
   }
   
+  /**
+   * Handle a php error
+   *
+   * @param string $code 
+   * @param string $message 
+   * @param string $file 
+   * @param string $line 
+   * @return void
+   * @author Rich Cavanaugh
+   */
   public static function errorHandler($code, $message, $file, $line)
   {
     if ($code == E_STRICT) return;
@@ -19,6 +35,13 @@ class Hoptoad
     Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $message, $file, $line, $trace, null);
   }
   
+  /**
+   * Handle a raised exception
+   *
+   * @param string $exception 
+   * @return void
+   * @author Rich Cavanaugh
+   */
   public static function exceptionHandler($exception)
   {
   	$trace = Hoptoad::tracer($exception->getTrace());
@@ -26,6 +49,12 @@ class Hoptoad
     Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $exception->getMessage(), $exception->getFile(), $exception->getLine(), $trace, null);
   }
   
+  /**
+   * Pass the error and environment data on to Hoptoad
+   *
+   * @package default
+   * @author Rich Cavanaugh
+   */
   public static function notifyHoptoad($api_key, $message, $file, $line, $trace, $error_class=null)
   {
     $req =& new HTTP_Request("http://hoptoadapp.com/notices/", array("method" => "POST", "timeout" => 2));
@@ -39,13 +68,14 @@ class Hoptoad
     } else {
       $session = array();
     }
-        
+    
+    $url = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
     $body = array(
       'api_key'         => $api_key,
       'error_class'     => $error_class,
       'error_message'   => $message,
       'backtrace'       => $trace,
-      'request'         => array("params" => $_REQUEST, "url" => "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}"),
+      'request'         => array("params" => $_REQUEST, "url" => $url),
       'session'         => $session,
       'environment'     => $_SERVER
     );
@@ -54,6 +84,13 @@ class Hoptoad
     $req->sendRequest();
   }
   
+  /**
+   * Build a trace that is formatted in the way Hoptoad expects
+   *
+   * @param string $trace 
+   * @return void
+   * @author Rich Cavanaugh
+   */
   public static function tracer($trace = NULL)
   {
     $lines = Array(); 
