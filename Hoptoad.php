@@ -1,12 +1,15 @@
 <?php
+if (!class_exists('HTTP_Request')) require_once('HTTP/Request.php');
+if (!class_exists('Horde_Yaml')) require_once('Horde/Yaml.php');
+if (!class_exists('Horde_Yaml_Dumper')) require_once('Horde/Yaml/Dumper.php');
+
 class Hoptoad
 {
   public static function errorHandler($code, $message, $file, $line)
   {
     if ($code == E_STRICT) return;
     
-	$trace = Hoptoad::tracer();
-    
+	  $trace = Hoptoad::tracer();
     Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $message, $file, $line, $trace, null);
   }
   
@@ -30,7 +33,7 @@ class Hoptoad
     } else {
       $session = array();
     }
-
+        
     $body = array(
       'api_key'         => $api_key,
       'error_class'     => $error_class,
