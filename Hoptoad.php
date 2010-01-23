@@ -74,7 +74,7 @@ class Hoptoad
 			'Content-Type'	=> 'text/xml'
 		));
 		$req->setBody(self::buildXmlNotice($api_key, $message, $trace, $error_class, $environment));
-		echo $req->send()->getBody();
+		$req->send();
 	}
 
 	/**
