@@ -66,10 +66,11 @@ class Services_Hoptoad
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
-	public static function installHandlers($api_key=NULL, $environment=NULL)
+	public static function installHandlers($api_key=NULL, $environment=NULL, $client=NULL)
 	{
 		if (isset($api_key)) self::$apiKey = $api_key;
 		if (isset($environment)) self::$environment = $environment;
+		if (isset($client)) self::$client = $client;
 
 		set_error_handler(array("Services_Hoptoad", "errorHandler"));
 		set_exception_handler(array("Services_Hoptoad", "exceptionHandler"));

@@ -2,6 +2,10 @@
 
 This is a simple [Hoptoad](http://hoptoadapp.com) notifier for PHP. It's been used in a few production sites now with success. It's not quite as fully featured as the official Ruby notifier but it works well.
 
+# Thanks
+
+Big thanks to Lou Kosak and Till Klampaeckel who have both contributed extensively to this project.
+
 # Limitations
 
 This notifier does not contain two big features from the Ruby notifier. The two are error filtering and deploy tracking. Error filtering will be coming in a future release.
@@ -10,10 +14,14 @@ For deploy tracking, since I use Capistrano to deploy my PHP apps, I simply use 
 
 # Requirements
 
-Install Pear's HTTP_Request2:
+To use the default _pear_ client install Pear's HTTP_Request2:
 
     pear install HTTP_Request2
-    
+
+To use the _curl_ client, install the PHP curl extension. To install on Ubuntu if you are using PHP 5 you would run:
+		sudo apt-get install php5-curl
+		sudo /etc/init.d/apache2 reload
+
 # License
 
 Copyright (c) 2010, Rich Cavanaugh
