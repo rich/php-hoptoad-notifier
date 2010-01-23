@@ -34,6 +34,12 @@ class Services_Hoptoad
 	const NOTIFIER_URL = 'http://github.com/rich/php-hoptoad-notifier';
 	const NOTIFIER_API_VERSION = '2.0';
 
+  protected $error_class;
+  protected $message;
+  protected $file;
+  protected $line;
+  protected $trace;
+	
 	/**
 	 * Report E_STRICT
 	 *
@@ -90,13 +96,8 @@ class Services_Hoptoad
 	{
 		if ($code == E_STRICT && self::$reportESTRICT === false) return;
 
-		$trace = self::tracer();
-		self::notify(
-			$message, 
-			$file, 
-			$line, 
-			$trace
-		);
+		$hoptoad = new Services_Hoptoad($code, $message, $file, $line, debug_backtrace());
+		$hoptoad->notify();
 	}
 
 	/**
@@ -108,32 +109,19 @@ class Services_Hoptoad
 	 */
 	public static function exceptionHandler($exception)
 	{
-		$trace = self::tracer($exception->getTrace());
-
-		self::notify(
-			$exception->getMessage(), 
-			$exception->getFile(), 
-			$exception->getLine(), 
-			$trace, 
-			get_class($exception)
-		);
+		$hoptoad = new Services_Hoptoad(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
+		$hoptoad->notify();
 	}
 
-	/**
-	 * Extract the line, method and class from a trace line
-	 * @param string $line
-	 * @return array
-	 * @author Rich Cavanaugh
-	 **/
-	public static function extractLineMethodAndClass($line)
-	{
-		if (preg_match('/^([0-9]+)\sin\sfunction\s(.*)\sin\sclass\s(.*)$/', $line, $matches)) {
-			return array($matches[1], $matches[2], $matches[3]);
-		} else {
-			return array($line, NULL, NULL);
-		}
-	}
-
+  function __construct($error_class, $message, $file, $line, $trace, $component=NULL) {
+    $this->error_class 	= $error_class;
+    $this->message     	= $message;
+    $this->file        	= $file;
+    $this->line        	= $line;
+		$this->trace       	= $trace;
+		$this->component		= $component;
+  }
+	
 	/**
 	 * Pass the error and environment data on to Hoptoad
 	 *
@@ -148,20 +136,18 @@ class Services_Hoptoad
 	 * @author Rich Cavanaugh
    * @todo   Handle response (e.g. errors)
 	 */
-	public static function notify($message, $file, $line, $trace, $error_class=null)
+	function notify()
 	{
-		array_unshift($trace, "$file:$line");
-
 		$url = "http://hoptoadapp.com/notifier_api/v2/notices";
 		$headers = array(
 			'Accept'				=> 'text/xml, application/xml',
 			'Content-Type'	=> 'text/xml'
 		);
-		$body = self::buildXmlNotice($message, $trace, $error_class);
+		$body = $this->buildXmlNotice();
 
 		try {
-			$status = call_user_func_array(array('Services_Hoptoad', self::$client . 'Request'), array($url, $headers, $body));
-			if ($status != 200) self::handleErrorResponse($status);
+			$status = call_user_func_array(array($this, self::$client . 'Request'), array($url, $headers, $body));
+			if ($status != 200) $this->handleErrorResponse($status);
 		} catch (RuntimeException $e) {
 			// TODO do something reasonable with the runtime exception.
 			// we can't really throw our runtime exception since we're likely in
@@ -175,7 +161,7 @@ class Services_Hoptoad
 	 * @return string
 	 * @author Rich Cavanaugh
 	 **/
-	public static function buildXmlNotice($message, $trace, $error_class, $component='')
+	function buildXmlNotice()
 	{
 		$doc = new SimpleXMLElement('<notice />');
 		$doc->addAttribute('version', self::NOTIFIER_API_VERSION);
@@ -187,51 +173,18 @@ class Services_Hoptoad
 		$notifier->addChild('url', self::NOTIFIER_URL);
 
 		$error = $doc->addChild('error');
-		$error->addChild('class', $error_class);
-		$error->addChild('message', $message);
-
-		$backtrace = $error->addChild('backtrace');
-		foreach ($trace as $line) {
-			$line_node = $backtrace->addChild('line');
-			list($file, $number) = explode(':', $line);
-			$line_node->addAttribute('file', $file);
-			list($number, $method, $class) = self::extractLineMethodAndClass($number);
-			$line_node->addAttribute('number', $number);
-			$line_node->addAttribute('method', $method);
-		}
+		$error->addChild('class', $this->error_class);
+		$error->addChild('message', $this->message);
+		$this->addXmlBacktrace($error);
 
 		$request = $doc->addChild('request');
-		$request->addChild('url', "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}");
-		$request->addChild('component', $component);
+		$request->addChild('url', $this->request_uri());
+		$request->addChild('component', $this->component);
 
-		if (isset($_REQUEST) && !empty($_REQUEST)) {
-			$params = $request->addChild('params');
-			foreach ($_REQUEST as $key => $val) {
-				$var_node = $params->addChild('var', $val);
-				$var_node->addAttribute('key', $key);
-			}
-		}
-
-		if (isset($_SESSION) && !empty($_SESSION)) {
-			$session = $request->addChild('session');
-			foreach ($_SESSION as $key => $val) {
-				$var_node = $session->addChild('var', $val);
-				$var_node->addAttribute('key', $key);			
-			}			
-		}
-
-		$cgi_data = $request->addChild('cgi-data');
-		foreach ($_SERVER as $key => $val) {
-			$var_node = $cgi_data->addChild('var', $val);
-			$var_node->addAttribute('key', $key);			
-		}
-
-		if (isset($_ENV) && !empty($_ENV)) {
-			foreach ($_ENV as $key => $val) {
-				$var_node = $cgi_data->addChild('var', $val);
-				$var_node->addAttribute('key', $key);			
-			}
-		}
+		if (isset($_REQUEST)) $this->addXmlVars($request, 'params', $_REQUEST);
+		if (isset($_SESSION)) $this->addXmlVars($request, 'session', $_SESSION);
+		if (isset($_SERVER)) $this->addXmlVars($request, 'cgi-data', $_SERVER);
+		if (isset($_ENV)) $this->addXmlVars($request, 'cgi-data', $_ENV);
 
 		$env = $doc->addChild('server-environment');
 		$env->addChild('project-root', $_SERVER['DOCUMENT_ROOT']);
@@ -241,47 +194,67 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * Build a trace that is formatted in the way Hoptoad expects
-	 *
-	 * @param string $trace 
+	 * addXmlVars
 	 * @return void
 	 * @author Rich Cavanaugh
-	 */
-	public static function tracer($trace = NULL)
+	 **/
+	function addXmlVars($parent, $key, $source)
 	{
-		$lines = Array(); 
+		if (empty($source)) return;
 
-		$trace = $trace ? $trace : debug_backtrace();
-
-		$indent = '';
-		$func = '';
-
-		foreach($trace as $val) {
-			if (isset($val['class']) && $val['class'] == 'Services_Hoptoad') continue;
-
-			$file = isset($val['file']) ? $val['file'] : 'Unknown file';
-			$line_number = isset($val['line']) ? $val['line'] : '';
-			$func = isset($val['function']) ? $val['function'] : '';
-			$class = isset($val['class']) ? $val['class'] : '';
-
-			$line = $file;
-			if ($line_number) $line .= ':' . $line_number;
-			if ($func) $line .= ' in function ' . $func;
-			if ($class) $line .= ' in class ' . $class;
-
-			$lines[] = $line;
+		$node = $parent->addChild($key);
+		foreach ($source as $key => $val) {
+			$var_node = $node->addChild('var', $val);
+			$var_node->addAttribute('key', $key);
 		}
-
-		return $lines;
 	}
 
+	/**
+	 * addXmlBacktrace
+	 * @return void
+	 * @author Rich Cavanaugh
+	 **/
+	function addXmlBacktrace($parent)
+	{
+		$backtrace = $parent->addChild('backtrace');
+		$line_node = $backtrace->addChild('line');
+		$line_node->addAttribute('file', $this->file);
+		$line_node->addAttribute('number', $this->line);
+
+		foreach ($this->trace as $entry) {
+			if (isset($entry['class']) && $entry['class'] == 'Services_Hoptoad') continue;
+
+			$line_node = $backtrace->addChild('line');
+			$line_node->addAttribute('file', $entry['file']);
+			$line_node->addAttribute('number', $entry['line']);
+			$line_node->addAttribute('method', $entry['function']);
+		}
+	}
+
+	/**
+		* get the request uri
+		* @return string
+		* @author Scott Woods
+	 **/
+  function request_uri() {
+    if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+      $protocol = 'https';
+    } else {
+      $protocol = 'http';
+    }
+    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+    $path = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+    $query_string = isset($_SERVER['QUERY_STRING']) && !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
+    return "{$protocol}://{$host}{$path}{$query_string}";
+  }
+	
 	/**
 	 * @param mixed $code The HTTP status code from Hoptoad.
 	 *
 	 * @return void
 	 * @throws RuntimeException Error message from hoptoad, translated to a RuntimeException.
 	 */
-	protected static function handleErrorResponse($code)
+	protected function handleErrorResponse($code)
 	{
 		switch ($code) {
 		case '403':
@@ -306,7 +279,7 @@ class Services_Hoptoad
 	 * @return integer
 	 * @author Rich Cavanaugh
 	 **/
-	public static function pearRequest($url, $headers, $body)
+	public function pearRequest($url, $headers, $body)
 	{
 		if (!class_exists('HTTP_Request2')) require_once('HTTP/Request2.php');
 		if (!class_exists('HTTP_Request2_Adapter_Socket')) require_once 'HTTP/Request2/Adapter/Socket.php';
@@ -324,7 +297,7 @@ class Services_Hoptoad
 	 * @return integer
 	 * @author Rich Cavanaugh
 	 **/
-	public static function curlRequest($url, $headers, $body)
+	public function curlRequest($url, $headers, $body)
 	{
 		$header_strings = array();
 		foreach ($headers as $key => $val) {
@@ -350,7 +323,7 @@ class Services_Hoptoad
 	 * @return integer
 	 * @author Rich Cavanaugh
 	 **/
-	public static function zendRequest($url, $headers, $body)
+	public function zendRequest($url, $headers, $body)
 	{
 		$header_strings = array();
 		foreach ($headers as $key => $val) {
