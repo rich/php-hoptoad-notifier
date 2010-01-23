@@ -57,6 +57,20 @@ class Hoptoad
 	}
 
 	/**
+	 * Extract the line, method and class from a trace line
+	 * @return array
+	 * @author Rich Cavanaugh
+	 **/
+	public static function extractLineMethodAndClass($line)
+	{
+		if (preg_match('/^([0-9]+)\sin\sfunction\s(.*)\sin\sclass\s(.*)$/', $line, $matches)) {
+			return array($matches[1], $matches[2], $matches[3]);
+		} else {
+			return array($line, NULL, NULL);
+		}
+	}
+
+	/**
 	 * Pass the error and environment data on to Hoptoad
 	 *
 	 * @package default
@@ -103,8 +117,9 @@ class Hoptoad
 			$line_node = $backtrace->addChild('line');
 			list($file, $number) = explode(':', $line);
 			$line_node->addAttribute('file', $file);
+			list($number, $method, $class) = self::extractLineMethodAndClass($number);
 			$line_node->addAttribute('number', $number);
-			$line_node->addAttribute('method', '');
+			$line_node->addAttribute('method', $method);
 		}
 
 		$request = $doc->addChild('request');
