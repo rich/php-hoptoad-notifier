@@ -53,7 +53,7 @@ class Hoptoad
 	{
 		$trace = Hoptoad::tracer($exception->getTrace());
 
-		Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $exception->getMessage(), $exception->getFile(), $exception->getLine(), $trace, null, HOPTOAD_APP_ENVIRONMENT);
+		Hoptoad::notifyHoptoad(HOPTOAD_API_KEY, $exception->getMessage(), $exception->getFile(), $exception->getLine(), $trace, get_class($exception), HOPTOAD_APP_ENVIRONMENT);
 	}
 
 	/**
