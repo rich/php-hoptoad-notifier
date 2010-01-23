@@ -1,6 +1,6 @@
 # Introduction
 
-This is a simple [Hoptoad](http://hoptoadapp.com) notifier for PHP. It's been used in a few production sites now with success. It's not quite as fully featured as the official Ruby notifier but it works well. 
+This is a simple [Hoptoad](http://hoptoadapp.com) notifier for PHP. It's been used in a few production sites now with success. It's not quite as fully featured as the official Ruby notifier but it works well.
 
 # Limitations
 
@@ -10,18 +10,13 @@ For deploy tracking, since I use Capistrano to deploy my PHP apps, I simply use 
 
 # Requirements
 
-The notifier uses the Horde_Yaml class. You can install this class using the commands below.
+Install Pear's HTTP_Request2:
 
-    pear channel-discover pear.horde.org
-    pear install horde/yaml
-
-It also uses Pear's HTTP_Request:
-
-    pear install HTTP_Request
+    pear install HTTP_Request2
     
 # License
 
-Copyright (c) 2009, Rich Cavanaugh
+Copyright (c) 2010, Rich Cavanaugh
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
