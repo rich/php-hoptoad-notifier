@@ -22,7 +22,7 @@ To use the _curl_ client, install the PHP curl extension. To install on Ubuntu i
 		sudo apt-get install php5-curl
 		sudo /etc/init.d/apache2 reload
 
-# License
+# BSD License
 
 Copyright (c) 2010, Rich Cavanaugh
 All rights reserved.
