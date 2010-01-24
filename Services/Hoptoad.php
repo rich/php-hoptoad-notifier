@@ -152,6 +152,21 @@ class Services_Hoptoad
 	}
 
 	/**
+	 * Set the values to be used for the next notice sent to Hoptoad
+	 * @return void
+	 * @author Rich Cavanaugh
+	 **/
+	public function setParamsForNotify($error_class, $message, $file, $line, $trace, $component=NULL)
+	{
+		$this->error_class = $error_class;
+		$this->message = $message;
+		$this->file = $file;
+		$this->line = $line;
+		$this->trace = $trace;
+		$this->component = $component;
+	}
+
+	/**
 	 * Pass the error and environment data on to Hoptoad
 	 *
 	 * @param mixed  $error_class
@@ -160,18 +175,13 @@ class Services_Hoptoad
 	 * @param string $line
 	 * @param array  $trace
 	 * @param string $environment
-	 * 
+	 *
 	 * @author Rich Cavanaugh
 	 * @todo   Handle response (e.g. errors)
 	 */
 	function notify($error_class, $message, $file, $line, $trace, $component=NULL)
 	{
-		$this->error_class = $error_class;
-		$this->message = $message;
-		$this->file = $file;
-		$this->line = $line;
-		$this->trace = $trace;
-		$this->component = $component;
+		$this->setParamsForNotify($error_class, $message, $file, $line, $trace, $component);
 
 		$url = "http://hoptoadapp.com/notifier_api/v2/notices";
 		$headers = array(
