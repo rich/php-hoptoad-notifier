@@ -72,14 +72,15 @@ class Services_Hoptoad
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
-	public static function installHandlers($api_key=NULL, $environment=NULL, $client=NULL)
+	public static function installHandlers($api_key=NULL, $environment=NULL, $client=NULL, $class='Services_Hoptoad')
 	{
 		if (isset($api_key)) self::$apiKey = $api_key;
 		if (isset($environment)) self::$environment = $environment;
 		if (isset($client)) self::$client = $client;
 
-		set_error_handler(array("Services_Hoptoad", "errorHandler"));
-		set_exception_handler(array("Services_Hoptoad", "exceptionHandler"));
+		$hoptoad = new $class;
+		set_error_handler(array($hoptoad, "errorHandler"));
+		set_exception_handler(array($hoptoad, "exceptionHandler"));
 	}
 
 	/**
@@ -92,12 +93,11 @@ class Services_Hoptoad
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
-	public static function errorHandler($code, $message, $file, $line)
+	public function errorHandler($code, $message, $file, $line)
 	{
 		if ($code == E_STRICT && self::$reportESTRICT === false) return;
 
-		$hoptoad = new self($code, $message, $file, $line, debug_backtrace());
-		$hoptoad->notify();
+		$this->notify($code, $message, $file, $line, debug_backtrace());
 	}
 
 	/**
@@ -107,37 +107,33 @@ class Services_Hoptoad
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
-	public static function exceptionHandler($exception)
+	public function exceptionHandler($exception)
 	{
-		$hoptoad = new self(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
-		$hoptoad->notify();
-	}
-
-	function __construct($error_class, $message, $file, $line, $trace, $component=NULL) {
-		$this->error_class 	= $error_class;
-		$this->message     	= $message;
-		$this->file        	= $file;
-		$this->line        	= $line;
-		$this->trace       	= $trace;
-		$this->component		= $component;
+		$this->notify(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
 	}
 
 	/**
 	 * Pass the error and environment data on to Hoptoad
 	 *
-	 * @param string $api_key
+	 * @param mixed  $error_class
 	 * @param string $message
 	 * @param string $file
 	 * @param string $line
 	 * @param array  $trace
-	 * @param mixed  $error_class
 	 * @param string $environment
 	 * 
 	 * @author Rich Cavanaugh
 	 * @todo   Handle response (e.g. errors)
 	 */
-	function notify()
+	function notify($error_class, $message, $file, $line, $trace, $component=NULL)
 	{
+		$this->error_class = $error_class;
+		$this->message = $message;
+		$this->file = $file;
+		$this->line = $line;
+		$this->trace = $trace;
+		$this->component = $component;
+
 		$url = "http://hoptoadapp.com/notifier_api/v2/notices";
 		$headers = array(
 			'Accept'				=> 'text/xml, application/xml',
