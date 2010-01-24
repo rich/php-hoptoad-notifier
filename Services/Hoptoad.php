@@ -22,10 +22,6 @@
  * @license  
  * @version  Release: @package_version@
  * @link     http://github.com/rich/php-hoptoad-notifier
- * @todo     This class shouldn't be all static.
- * @todo     Add a unit test, or two.
- * @todo     Allow injection of Zend_Http_Client or HTTP_Request2
- * @todo		 Refactor the mess of tracer() and extractLineMethodAndClass()
  */
 class Services_Hoptoad
 {
