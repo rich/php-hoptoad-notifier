@@ -96,7 +96,7 @@ class Services_Hoptoad
 	{
 		if ($code == E_STRICT && self::$reportESTRICT === false) return;
 
-		$hoptoad = new Services_Hoptoad($code, $message, $file, $line, debug_backtrace());
+		$hoptoad = new self($code, $message, $file, $line, debug_backtrace());
 		$hoptoad->notify();
 	}
 
@@ -109,7 +109,7 @@ class Services_Hoptoad
 	 */
 	public static function exceptionHandler($exception)
 	{
-		$hoptoad = new Services_Hoptoad(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
+		$hoptoad = new self(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
 		$hoptoad->notify();
 	}
 
