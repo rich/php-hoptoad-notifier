@@ -34,12 +34,12 @@ class Services_Hoptoad
 	const NOTIFIER_URL = 'http://github.com/rich/php-hoptoad-notifier';
 	const NOTIFIER_API_VERSION = '2.0';
 
-  protected $error_class;
-  protected $message;
-  protected $file;
-  protected $line;
-  protected $trace;
-	
+	protected $error_class;
+	protected $message;
+	protected $file;
+	protected $line;
+	protected $trace;
+
 	/**
 	 * Report E_STRICT
 	 *
@@ -113,15 +113,15 @@ class Services_Hoptoad
 		$hoptoad->notify();
 	}
 
-  function __construct($error_class, $message, $file, $line, $trace, $component=NULL) {
-    $this->error_class 	= $error_class;
-    $this->message     	= $message;
-    $this->file        	= $file;
-    $this->line        	= $line;
+	function __construct($error_class, $message, $file, $line, $trace, $component=NULL) {
+		$this->error_class 	= $error_class;
+		$this->message     	= $message;
+		$this->file        	= $file;
+		$this->line        	= $line;
 		$this->trace       	= $trace;
 		$this->component		= $component;
-  }
-	
+	}
+
 	/**
 	 * Pass the error and environment data on to Hoptoad
 	 *
@@ -134,7 +134,7 @@ class Services_Hoptoad
 	 * @param string $environment
 	 * 
 	 * @author Rich Cavanaugh
-   * @todo   Handle response (e.g. errors)
+	 * @todo   Handle response (e.g. errors)
 	 */
 	function notify()
 	{
@@ -179,16 +179,16 @@ class Services_Hoptoad
 
 		$request = $doc->addChild('request');
 		$request->addChild('url', $this->request_uri());
-		$request->addChild('component', $this->component);
+		$request->addChild('component', $this->component());
+		$request->addChild('action', $this->action());
 
-		if (isset($_REQUEST)) $this->addXmlVars($request, 'params', $_REQUEST);
-		if (isset($_SESSION)) $this->addXmlVars($request, 'session', $_SESSION);
-		if (isset($_SERVER)) $this->addXmlVars($request, 'cgi-data', $_SERVER);
-		if (isset($_ENV)) $this->addXmlVars($request, 'cgi-data', $_ENV);
+		if (isset($_REQUEST)) $this->addXmlVars($request, 'params', $this->params());
+		if (isset($_SESSION)) $this->addXmlVars($request, 'session', $this->session());
+		if (isset($_SERVER)) $this->addXmlVars($request, 'cgi-data', $this->cgi_data());
 
 		$env = $doc->addChild('server-environment');
-		$env->addChild('project-root', $_SERVER['DOCUMENT_ROOT']);
-		$env->addChild('environment-name', self::$environment);
+		$env->addChild('project-root', $this->project_root());
+		$env->addChild('environment-name', $this->environment());
 
 		return $doc->asXML();
 	}
@@ -232,22 +232,84 @@ class Services_Hoptoad
 	}
 
 	/**
-		* get the request uri
-		* @return string
-		* @author Scott Woods
+	 * params
+	 * @return array
+	 * @author Scott Woods
 	 **/
-  function request_uri() {
-    if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
-      $protocol = 'https';
-    } else {
-      $protocol = 'http';
-    }
-    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-    $path = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
-    $query_string = isset($_SERVER['QUERY_STRING']) && !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
-    return "{$protocol}://{$host}{$path}{$query_string}";
-  }
-	
+	function params() {
+		return $_REQUEST;
+	}
+
+	/**
+	 * session
+	 * @return array
+	 * @author Scott Woods
+	 **/
+	function session() {
+		return $_SESSION;
+	}
+
+	/**
+	 * cgi_data
+	 * @return array
+	 * @author Scott Woods
+	 **/
+	function cgi_data() {
+		if (isset($_ENV) && !empty($_ENV)) {
+			return array_merge($_SERVER, $_ENV);
+		}
+		return $_SERVER;
+	}
+
+	/**
+	 * component
+	 * @return mixed
+	 * @author Scott Woods
+	 **/
+	function component() {
+		return $this->component;
+	}
+
+	/**
+	 * action
+	 * @return mixed
+	 * @author Scott Woods
+	 **/
+	function action() {
+		return '';
+	}
+
+	/**
+	 * project_root
+	 * @return string
+	 * @author Scott Woods
+	 **/
+	function project_root() {
+		if (isset($_SERVER['DOCUMENT_ROOT'])) {
+			return $_SERVER['DOCUMENT_ROOT'];
+		} else {
+			return dirname(__FILE__);
+		}
+	}
+
+
+	/**
+	 * get the request uri
+	 * @return string
+	 * @author Scott Woods
+	 **/
+	function request_uri() {
+		if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+			$protocol = 'https';
+		} else {
+			$protocol = 'http';
+		}
+		$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+		$path = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+		$query_string = isset($_SERVER['QUERY_STRING']) && !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
+		return "{$protocol}://{$host}{$path}{$query_string}";
+	}
+
 	/**
 	 * @param mixed $code The HTTP status code from Hoptoad.
 	 *
@@ -273,7 +335,7 @@ class Services_Hoptoad
 
 		throw new RuntimeException($msg, $code);
 	}
-	
+
 	/**
 	 * Send the request to Hoptoad using PEAR
 	 * @return integer
@@ -283,7 +345,7 @@ class Services_Hoptoad
 	{
 		if (!class_exists('HTTP_Request2')) require_once('HTTP/Request2.php');
 		if (!class_exists('HTTP_Request2_Adapter_Socket')) require_once 'HTTP/Request2/Adapter/Socket.php';
-		
+
 		$adapter = new HTTP_Request2_Adapter_Socket;
 		$req = new HTTP_Request2($url, HTTP_Request2::METHOD_POST);
 		$req->setAdapter($adapter);
