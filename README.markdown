@@ -4,7 +4,7 @@ This is a simple [Hoptoad](http://hoptoadapp.com) notifier for PHP. It's been us
 
 # Thanks
 
-Big thanks to Lou Kosak and Till Klampaeckel who have both contributed extensively to this project.
+Big thanks to Lou Kosak, Till Klampaeckel and Scott Woods who have both contributed extensively to this project.
 
 # Limitations
 
