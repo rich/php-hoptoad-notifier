@@ -46,41 +46,80 @@ class Services_Hoptoad
 	 * @var bool $reportESTRICT
 	 * @todo Implement set!
 	 */
-	protected static $reportESTRICT = false;
+	protected $reportESTRICT;
 
 	/**
 	 * Timeout for cUrl.
 	 * @var int $timeout
 	 */
-	protected static $timeout = 2;
+	protected $timeout;
 
-	public static $client = 'pear'; // pear, curl or zend
+	public $client; // pear, curl or zend
 
 	/**
 	 * @var mixed $apiKey
 	 */
-	public static $apiKey = null;
+	public $apiKey;
 
 	/**
 	 * @var string
 	 **/
-	public static $environment = 'production';
+	public $environment;
 
 	/**
-	 * Install the error and exception handlers that connect to Hoptoad
+	 * Initialize the chosen notifier and install the error
+	 * and exception handlers that connect to Hoptoad
 	 *
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
-	public static function installHandlers($api_key=NULL, $environment=NULL, $client=NULL, $class='Services_Hoptoad')
+	public static function installHandlers($apiKey=NULL, $environment=NULL, $client=NULL, $class='Services_Hoptoad')
 	{
-		if (isset($api_key)) self::$apiKey = $api_key;
-		if (isset($environment)) self::$environment = $environment;
-		if (isset($client)) self::$client = $client;
+		$hoptoad = new $class($apiKey, $environment, $client);
+		$hoptoad->installNotifierHandlers();
+	}
 
-		$hoptoad = new $class;
-		set_error_handler(array($hoptoad, "errorHandler"));
-		set_exception_handler(array($hoptoad, "exceptionHandler"));
+	/**
+	 * Hook's this notifier to PHP error and exception handlers
+	 * @return void
+	 * @author Rich Cavanaugh
+	 **/
+	public function installNotifierHandlers()
+	{
+		set_error_handler(array($this, "errorHandler"));
+		set_exception_handler(array($this, "exceptionHandler"));		
+	}
+
+	/**
+	 * Initialize the Hoptad client
+	 *
+	 * @param string $apiKey
+	 * @param string $environment
+	 * @param string $client
+	 * @param string $reportESTRICT
+	 * @param int $timeout
+	 * @return void
+	 * @author Rich Cavanaugh
+	 */	
+	function __construct($apiKey, $environment='production', $client='pear', $reportESTRICT=false, $timeout=2)
+	{
+		$this->apiKey = $apiKey;
+		$this->environment = $environment;
+		$this->client = $client;
+		$this->reportESTRICT = $reportESTRICT;
+		$this->timeout = $timeout;
+		$this->setup();
+	}
+
+	/**
+	 * A method meant specifically for subclasses to override so they don't need
+	 * to handle the constructor
+	 * @return void
+	 * @author Rich Cavanaugh
+	 **/
+	public function setup()
+	{
+		// we don't do anything here in the base class
 	}
 
 	/**
@@ -95,7 +134,7 @@ class Services_Hoptoad
 	 */
 	public function errorHandler($code, $message, $file, $line)
 	{
-		if ($code == E_STRICT && self::$reportESTRICT === false) return;
+		if ($code == E_STRICT && $this->reportESTRICT === false) return;
 
 		$this->notify($code, $message, $file, $line, debug_backtrace());
 	}
@@ -142,7 +181,7 @@ class Services_Hoptoad
 		$body = $this->buildXmlNotice();
 
 		try {
-			$status = call_user_func_array(array($this, self::$client . 'Request'), array($url, $headers, $body));
+			$status = call_user_func_array(array($this, $this->client . 'Request'), array($url, $headers, $body));
 			if ($status != 200) $this->handleErrorResponse($status);
 		} catch (RuntimeException $e) {
 			// TODO do something reasonable with the runtime exception.
@@ -161,7 +200,7 @@ class Services_Hoptoad
 	{
 		$doc = new SimpleXMLElement('<notice />');
 		$doc->addAttribute('version', self::NOTIFIER_API_VERSION);
-		$doc->addChild('api-key', self::$apiKey);
+		$doc->addChild('api-key', $this->apiKey);
 
 		$notifier = $doc->addChild('notifier');
 		$notifier->addChild('name', self::NOTIFIER_NAME);
@@ -190,7 +229,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * addXmlVars
+	 * Add a Hoptoad var block to the XML
 	 * @return void
 	 * @author Rich Cavanaugh
 	 **/
@@ -206,7 +245,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * addXmlBacktrace
+	 * Add a Hoptoad backtrace to the XML
 	 * @return void
 	 * @author Rich Cavanaugh
 	 **/
@@ -281,7 +320,7 @@ class Services_Hoptoad
 	 * @author Rich Cavanaugh
 	 **/
 	function environment() {
-		return self::$environment;
+		return $this->environment;
 	}
 	
 	/**
@@ -375,7 +414,7 @@ class Services_Hoptoad
 		curl_setopt($curlHandle, CURLOPT_URL,            $url);
 		curl_setopt($curlHandle, CURLOPT_POST,           1);
 		curl_setopt($curlHandle, CURLOPT_HEADER,         0);
-		curl_setopt($curlHandle, CURLOPT_TIMEOUT,        self::$timeout);
+		curl_setopt($curlHandle, CURLOPT_TIMEOUT,        $this->timeout);
 		curl_setopt($curlHandle, CURLOPT_POSTFIELDS,     $body);
 		curl_setopt($curlHandle, CURLOPT_HTTPHEADER,     $header_strings);
 		curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, 1);

@@ -2,7 +2,7 @@
 class Services_Hoptoad_CodeIgniter extends Services_Hoptoad {
 	var $ci;
 
-	function __construct() {
+	function setup() {
 		$this->ci =& get_instance();
 	}
 
