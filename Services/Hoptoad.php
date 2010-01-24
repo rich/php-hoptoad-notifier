@@ -280,6 +280,15 @@ class Services_Hoptoad
 	}
 
 	/**
+	 * environment
+	 * @return string
+	 * @author Rich Cavanaugh
+	 **/
+	function environment() {
+		return self::$environment;
+	}
+	
+	/**
 	 * project_root
 	 * @return string
 	 * @author Scott Woods
