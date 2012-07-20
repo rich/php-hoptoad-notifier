@@ -7,6 +7,7 @@ $_SERVER = array(
   'HTTP_HOST'    => 'localhost',
   'REQUEST_URI'  => '/example.php',
   'HTTP_REFERER' => 'http://localhost/reports/something',
+  'QUERY_STRING' => 'arg1=val1&arg2=val2'
 );
 
 $_SESSION = array(
@@ -58,15 +59,16 @@ class HoptoadTest extends PHPUnit_Framework_TestCase
     public function testRequestURI()
     {
       // check protocol support
-      $this->assertEquals('http://localhost/example.php', $this->hoptoad->request_uri());
+      $this->assertEquals('http://localhost/example.php?arg1=val1&arg2=val2', $this->hoptoad->request_uri());
       $_SERVER['SERVER_PORT'] = 443;
-      $this->assertEquals('https://localhost/example.php', $this->hoptoad->request_uri());
+      $this->assertEquals('https://localhost/example.php?arg1=val1&arg2=val2', $this->hoptoad->request_uri());
       $_SERVER['SERVER_PORT'] = 80;
-      
-      // Check query string support.
-      $_SERVER['QUERY_STRING'] = 'commit=true';
-      $this->assertEquals('http://localhost/example.php?commit=true', $this->hoptoad->request_uri());
+
+      // Check without query string.
+      $old_query_string = $_SERVER['QUERY_STRING'];
       $_SERVER['QUERY_STRING'] = '';
+      $this->assertEquals('http://localhost/example.php', $this->hoptoad->request_uri());
+      $_SERVER['QUERY_STRING'] = $old_query_string;
     }
   
     public function testXMLBacktrace()
